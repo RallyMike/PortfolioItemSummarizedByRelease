@@ -178,7 +178,7 @@ Ext.define('CustomApp', {
                 }
 
 
-                if (aStory.Release === null){
+                if (!aStory.get("Release")){
                     aRelease.itsOID = "Not Scheduled";
                 }
                 else{
@@ -204,8 +204,8 @@ Ext.define('CustomApp', {
         // process the PI's releases data
         this._processPiReleases();
 
-        // chart PI's release meta data
-        this._chartPiReleases();
+        // fetch release names (we need to convert Release OIDs from the LBAPI to logical Release names)
+        this._fetchReleaseNames();
 
         // --- END BUCKET TIME BABY ---
 
@@ -240,8 +240,73 @@ Ext.define('CustomApp', {
     }, // end _processPiReleases
 
 
-    // bucket the PI's stories by RELEASE (and no release)
-    _processPiStories:function () {
+    // fetch all release names (we may later have to scale this back and do this more efficiently)
+    _fetchReleaseNames: function() {
+
+        var store = Ext.create('Rally.data.WsapiDataStore', {
+            model: 'Release',
+
+            fetch: ["ObjectID","Name"],
+            // scope globally
+            context: {
+                project: null
+            },
+            limit: Infinity,
+            autoLoad:true,
+            listeners: {
+                load: function(store, data, success) {
+                    console.log("data",data);
+
+                    // map release OIDs to release NAMES
+                    this._mapReleaseOIDsToNames(store, data);
+
+                },
+                scope: this
+            }
+        });
+
+    }, // end _fetchReleaseNames
+
+
+    _mapReleaseOIDsToNames: function(theStore, allReleaseRecords)
+    {
+        var releaseNamesByObjectId = {};
+
+        Ext.Array.each(allReleaseRecords,function(releaseRecord){
+            releaseNamesByObjectId[releaseRecord.get("ObjectID")] = releaseRecord.get("Name");
+        });
+
+
+        //This sets each to have its name
+        Ext.Array.each(this.gPiReleases,function(piReleases){
+            piReleases.itsName = releaseNamesByObjectId[piReleases.itsOID];
+
+            if(!piReleases.itsName){
+                piReleases.itsName = "Unscheduled";
+            }
+        });
+
+
+        var bucketReleaseByName = {};
+        Ext.Array.each(this.gPiReleases,function(piReleases){
+            if(!Ext.isArray(bucketReleaseByName[piReleases.itsName])){
+                bucketReleaseByName[piReleases.itsName] = [];
+            }
+            bucketReleaseByName[piReleases.itsName].push(piReleases);
+        });
+
+
+        console.log(bucketReleaseByName);
+
+
+        // chart PI's release meta data
+        this._chartPiReleases();
+
+    }, // end _fetchReleaseNames
+
+
+    // chart out the PI's releases
+    _chartPiReleases:function () {
 
 //        // spit out all leaf stories into a grid
 //        var snapshotGrid = Ext.create('Rally.ui.grid.Grid', {
