@@ -21,6 +21,13 @@ Ext.define('CustomApp', {
             itemId:'piLeafStoryGridContainer',
             layout:'fit',
             height:400
+        },
+        {
+            // panel where we will place the grid
+            xtype:'panel',
+            itemId:'piReleaseGridContainer',
+            layout:'fit',
+            height:400
         }
     ],
 
@@ -186,11 +193,11 @@ Ext.define('CustomApp', {
                 }
 
                 aRelease.itsStoryCount += 1;
-                aRelease.itsStoryPlanEstimate += aStory.get("PlanEstimate");
+                aRelease.itsStoryPlanEstimate += aStory.get("PlanEstimate")||0;
 
                 if (aStory.get("ScheduleState") === "Accepted"){
                     aRelease.itsStoryCountAccepted += 1;
-                    aRelease.itsStoryPlanEstimateAccepted += aStory.get("PlanEstimate");
+                    aRelease.itsStoryPlanEstimateAccepted += aStory.get("PlanEstimate")||0;
                 }
 
                 this.gPiReleases.push(aRelease);
@@ -224,16 +231,6 @@ Ext.define('CustomApp', {
         for (releaseNdx = 0; releaseNdx < nbrReleases; releaseNdx++){
 
             aRelease = this.gPiReleases[releaseNdx];
-
-            if (aRelease !== null){
-
-                console.dir(aRelease);
-                console.log("aRelease.itsOID: " + aRelease.itsOID);
-                console.log("aRelease.itsStoryCount: " + aRelease.itsStoryCount);
-                console.log("aRelease.itsStoryPlanEstimate: " + aRelease.itsStoryPlanEstimate);
-                console.log("aRelease.itsStoryCountAccepted: " + aRelease.itsStoryCountAccepted);
-                console.log("aRelease.itsStoryPlanEstimateAccepted: " + aRelease.itsStoryPlanEstimateAccepted);
-            }
 
         } // end loop through each of the PI's releases
 
@@ -272,78 +269,116 @@ Ext.define('CustomApp', {
     {
         var releaseNamesByObjectId = {};
 
+        // create a hash of all WSAPI release OIDs to their Name
         Ext.Array.each(allReleaseRecords,function(releaseRecord){
             releaseNamesByObjectId[releaseRecord.get("ObjectID")] = releaseRecord.get("Name");
         });
 
 
-        //This sets each to have its name
-        Ext.Array.each(this.gPiReleases,function(piReleases){
-            piReleases.itsName = releaseNamesByObjectId[piReleases.itsOID];
+        // loop through each PI's release object and set its name from the OID/Name hash
+        Ext.Array.each(this.gPiReleases,function(piRelease){
+            piRelease.itsName = releaseNamesByObjectId[piRelease.itsOID];
 
-            if(!piReleases.itsName){
-                piReleases.itsName = "Unscheduled";
+            if(!piRelease.itsName){
+                piRelease.itsName = "Unscheduled";
             }
         });
 
-
-        var bucketReleaseByName = {};
-        Ext.Array.each(this.gPiReleases,function(piReleases){
-            if(!Ext.isArray(bucketReleaseByName[piReleases.itsName])){
-                bucketReleaseByName[piReleases.itsName] = [];
+        // bucket PI's releases by name into the bucketReleaseByName object
+        var summedPisByReleaseName = {};
+//        itsName: "2012.2H"
+//        itsOID: 6883901892
+//        itsStoryCount: 1
+//        itsStoryCountAccepted: 1
+//        itsStoryPlanEstimate: 5
+//        itsStoryPlanEstimateAccepted: 5
+        Ext.Array.each(this.gPiReleases,function(piRelease){
+            if(!Ext.isObject(summedPisByReleaseName[piRelease.itsName])){
+                summedPisByReleaseName[piRelease.itsName] = piRelease;
             }
-            bucketReleaseByName[piReleases.itsName].push(piReleases);
+            //Pointer
+            var summedRelease = summedPisByReleaseName[piRelease.itsName];
+            summedRelease.itsStoryCount += piRelease.itsStoryCount;
+            summedRelease.itsStoryCountAccepted += piRelease.itsStoryCountAccepted;
+            summedRelease.itsStoryPlanEstimate += piRelease.itsStoryPlanEstimate;
+            summedRelease.itsStoryPlanEstimateAccepted += piRelease.itsStoryPlanEstimateAccepted;
         });
-
-
-        console.log(bucketReleaseByName);
 
 
         // chart PI's release meta data
-        this._chartPiReleases();
+        this._chartPiReleases(summedPisByReleaseName);
 
     }, // end _fetchReleaseNames
 
 
-    // chart out the PI's releases
-    _chartPiReleases:function () {
+    // chart out the PI's bucketed by name releases
+    _chartPiReleases:function (theBucketPiReleasesByName) {
 
-//        // spit out all leaf stories into a grid
-//        var snapshotGrid = Ext.create('Rally.ui.grid.Grid', {
-//            title:'Snapshots',
-//            store:store,
-//            columnCfgs:[
-//                {
-//                    text:'ObjectID',
-//                    dataIndex:'ObjectID'
-//                },
-//                {
-//                    text:'Name',
-//                    dataIndex:'Name'
-//                },
-//                {
-//                    text:'Project',
-//                    dataIndex:'Project'
-//                },
-//                {
-//                    text:'_UnformattedID',
-//                    dataIndex:'_UnformattedID'
-//                },
-//                ,
-//                {
-//                    text:'Release',
-//                    dataIndex:'Release'
-//                }
-//            ],
-//            height:400
-//        });
-//
-//        // render the grid of all of the PI's leaf stories
-//        var gridHolder = this.down('#piLeafStoryGridContainer');
-//        gridHolder.removeAll(true);
-//        gridHolder.add(snapshotGrid);
+        console.log(theBucketPiReleasesByName);
 
 
+
+
+        // define a custom  model
+        var aModel = Ext.define('CustomStoryModel', {
+            extend: 'Ext.data.Model',
+            fields: [
+                {name: 'itsName',  type: 'string'},
+                {name: 'itsOID',   type: 'int'},
+                {name: 'itsStoryCount',   type: 'int'},
+                {name: 'itsStoryCountAccepted',   type: 'int'},
+                {name: 'itsPlanEstimate',   type: 'int'},
+                {name: 'itsPlanEstimateAccepted',   type: 'int'}
+            ]
+        });
+
+        // define a store built around the custom  model
+        var aStore = Ext.create('Ext.data.Store', {
+            storeId: 'piReleaseStore',
+            model: aModel,
+            data: theBucketPiReleasesByName
+        });
+
+
+        // define a rally grid to output the store's data in
+        var aPiReleaseGrid = Ext.create('Rally.ui.grid.Grid', {
+            itemId: 'piReleaseGrid',
+            store: aStore,
+            width: 470,
+            columnCfgs: [
+                {
+                    text: 'Release', dataIndex: 'itsName', width: 80
+                },
+                {
+                    text: 'Release ID', dataIndex: 'itsOID', width: 80
+                },
+                {
+                    text: 'Story Count', dataIndex: 'itsStoryCount', width: 80
+                },
+                {
+                    text: 'Accepted Story Count', dataIndex: 'itsStoryCountAccepted', width: 80
+                },
+                {
+                    text: 'Plan Estimate', dataIndex: 'itsPlanEstimate', width: 80
+                },
+                {
+                    text: 'Accepted Plan Estimate', dataIndex: 'itsPlanEstimateAccepted', width: 80
+                }
+            ] // end columnCfgs
+        });
+
+
+
+
+
+
+
+
+
+        // render the grid of all of the PI's leaf stories
+        var aPiReleaseGridContainer = this.down('#piReleaseGridContainer');
+        aPiReleaseGridContainer.removeAll(true);
+        aPiReleaseGridContainer.add(aPiReleaseGrid);
 
 
     }, // end _chartPiReleases
