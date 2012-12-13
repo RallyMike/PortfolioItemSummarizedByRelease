@@ -52,7 +52,7 @@ Ext.define('CustomApp', {
 
     }, // end launch
 
-
+//best comment ever
     processSnapshots:function (store, records) {
         var snapshotGrid = Ext.create('Rally.ui.grid.Grid', {
             title:'Snapshots',
