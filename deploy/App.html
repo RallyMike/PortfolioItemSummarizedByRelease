@@ -80,10 +80,10 @@
     ],
     launch: function() {
         var button = this.down('#searchButton');
-        button.on('click', this.searchClicked, this);
+        button.on('click', this.goClicked, this);
     },
     
-    searchClicked: function(){
+    goClicked: function(){
         var queryField = this.down('#queryField');
         var query = queryField.getValue();
         var selectedFields = this.down('#fieldsField').getValue();
