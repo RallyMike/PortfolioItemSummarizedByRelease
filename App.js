@@ -102,7 +102,7 @@ Ext.define('CustomApp', {
         var piTextBox = this.down('#piTextBox');
         //piHeaderContainer.removeAll(true);
 
-        piTextBox.update("<br><b>Portfolio Item: </b>" + piFormattedID + " - " + piName);
+        piTextBox.update('<font size="5"><br><b>Portfolio Item: </b>' + piFormattedID + " - " + piName + "</font>");
 
 
         var query = {
@@ -322,32 +322,68 @@ Ext.define('CustomApp', {
         });
 
         // bucket PI's releases by NAME (accounts for roll-up releases) into the summedPisByReleaseName object
-        var summedPisByReleaseName = {};
+        var piByRolledUpReleases = {};
 
         Ext.Array.each(this.gPiReleases, function (piRelease) {
-            if (!Ext.isObject(summedPisByReleaseName[piRelease.itsName])) {
-                summedPisByReleaseName[piRelease.itsName] = piRelease;
+
+            // test if 1st pass through this release
+            if (!Ext.isObject(piByRolledUpReleases[piRelease.itsName])) {
+                piByRolledUpReleases[piRelease.itsName] = piRelease;
 
                 // localize summed release entry
-                var summedRelease = summedPisByReleaseName[piRelease.itsName];
+                var summedRelease = piByRolledUpReleases[piRelease.itsName];
             }
             else {
+                // working with an entry of a rolled up release
+
                 // localize summed release entry
-                var summedRelease = summedPisByReleaseName[piRelease.itsName];
+                var summedRelease = piByRolledUpReleases[piRelease.itsName];
+
                 summedRelease.itsStoryCount += piRelease.itsStoryCount;
                 summedRelease.itsStoryCountAccepted += piRelease.itsStoryCountAccepted;
                 summedRelease.itsStoryPlanEstimate += piRelease.itsStoryPlanEstimate;
                 summedRelease.itsStoryPlanEstimateAccepted += piRelease.itsStoryPlanEstimateAccepted;
+
+                // capture earliest start date and latest release date for roll up releases
+                if (piRelease.releaseStartDate < summedRelease.releaseStartDate){
+                    piRelease.releaseStartDate = summedRelease.releaseStartDate;
+                }
+                if (piRelease.releaseDate > summedRelease.releaseDate){
+                    piRelease.releaseDate = summedRelease.releaseDate;
+                }
             }
         });
 
-        var arrayOfStuff = Ext.Object.getValues(summedPisByReleaseName);
+
+        // convert data into a standard array
+        var arrayOfStuff = Ext.Object.getValues(piByRolledUpReleases);
+
+        // sort the array
+        arrayOfStuff.sort(this._sortPiByRolledUpReleases);
 
         // chart PI's release meta data
         this._chartPiReleases(arrayOfStuff);
 
     }, // end _fetchReleaseNames
 
+
+    // Define the sort function for the rolled up releases
+    _sortPiByRolledUpReleases:function (a, b){
+
+        //Compare "a" and "b" in some fashion, and return -1, 0, or 1
+        console.log(a);
+        console.log(b);
+
+        if (a.itsName === "Unscheduled"){
+            return 1;
+        }
+
+        if (a.releaseDate > b.releaseDate) {
+            return 1;
+        }
+
+        return -1;
+    },
 
     // chart out the PI's bucketed by name releases
     _chartPiReleases:function (piSummaryDatas) {
@@ -449,7 +485,7 @@ Ext.define('CustomApp', {
                 height:400,
                 chartConfig:{
                     chart:{
-                        type: 'bar'
+                        type: 'column'
                     },
                     title:{
                         text:'Portfolio Item By Release',
@@ -470,13 +506,16 @@ Ext.define('CustomApp', {
                     },
                     series:[
                         {
+                            name:"Not Accepted",
                             stacking: 'normal',
-                            data:storyPlanEstimateAccepted
+                            data:storyPlanEstimatesNotAccepted,
+                            color:"maroon"
                         },
-
                         {
+                            name:"Accepted",
                             stacking: 'normal',
-                            data:storyPlanEstimatesNotAccepted
+                            data:storyPlanEstimateAccepted,
+                            color:"darkgreen"
                         }
                     ]
                 }
