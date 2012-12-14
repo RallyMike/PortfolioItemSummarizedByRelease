@@ -316,6 +316,8 @@ Ext.define('CustomApp', {
             }
             else{
                 piRelease.itsName = "Unscheduled";
+                piRelease.releaseStartDate = "";
+                piRelease.releaseDate = "";
             }
         });
 
