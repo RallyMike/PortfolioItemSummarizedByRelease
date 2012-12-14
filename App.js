@@ -40,8 +40,8 @@ Ext.define('CustomApp', {
 
     // --- end global variables ---
 
-    fireChooser:function(){
-        Ext.create('Rally.ui.dialog.ChooserDialog',{
+    fireChooser:function () {
+        Ext.create('Rally.ui.dialog.ChooserDialog', {
             artifactTypes:['PortfolioItem'],
             autoShow:true,
             title:'Select Portfolio Item',
@@ -62,10 +62,10 @@ Ext.define('CustomApp', {
         // add select PI button to header
         var piHeaderContainer = this.down('#piHeaderContainer');
         piHeaderContainer.add({
-            xtype: 'rallybutton',
-            text: 'Select Portfolio Item',
+            xtype:'rallybutton',
+            text:'Select Portfolio Item',
             listeners:{
-                click: this.fireChooser,
+                click:this.fireChooser,
                 scope:this
             }
         });
@@ -74,7 +74,7 @@ Ext.define('CustomApp', {
         // add PI name text box (nulled) to header
         var piTextBox = Ext.create('Ext.container.Container', {
             itemId:"piTextBox",
-            html: ""
+            html:""
         });
         piHeaderContainer.add(piTextBox);
 
@@ -99,14 +99,10 @@ Ext.define('CustomApp', {
         this._reset();
 
 
-
         var piTextBox = this.down('#piTextBox');
         //piHeaderContainer.removeAll(true);
 
         piTextBox.update("<br><b>Portfolio Item: </b>" + piFormattedID + " - " + piName);
-
-
-
 
 
         var query = {
@@ -133,7 +129,7 @@ Ext.define('CustomApp', {
             pageSize:10000000,
             fetch:find,
             rawFind:query,
-            hydrate: ["ScheduleState"],
+            hydrate:["ScheduleState"],
             autoLoad:true,
             listeners:{
                 scope:this,
@@ -196,28 +192,20 @@ Ext.define('CustomApp', {
         var aRelease;
 
         var nbrStories = records.length;
-        //console.log("nbrStories: " + nbrStories);
 
         var storyNdx;
 
         // loop through each of the PI's stories
-        for (storyNdx = 0; storyNdx < nbrStories; storyNdx++){
+        for (storyNdx = 0; storyNdx < nbrStories; storyNdx++) {
             aStory = records[storyNdx];
 
-            if (aStory !== null){
-
-//                console.dir(aStory);
-//                console.log("aStory" + aStory);
-//                console.log("aStory" + aStory.get("Name"));
-//                console.log("aStory.PlanEstimate: " + aStory.get("PlanEstimate"));
-//                console.log("aStory.Release: " + aStory.get("Release"));
-//                console.log("aStory.ScheduleState: " + aStory.get("ScheduleState"));
+            if (aStory !== null) {
 
                 aRelease = null;
 
                 aRelease = this._findReleaseEntry(this.gPiReleases, aStory.Release);
 
-                if (aRelease === null){
+                if (aRelease === null) {
 
                     // populate initial entry for this release
                     aRelease = new Object();
@@ -230,19 +218,19 @@ Ext.define('CustomApp', {
                 }
 
 
-                if (!aStory.get("Release")){
+                if (!aStory.get("Release")) {
                     aRelease.itsOID = "Not Scheduled";
                 }
-                else{
+                else {
                     aRelease.itsOID = aStory.get("Release");
                 }
 
                 aRelease.itsStoryCount += 1;
-                aRelease.itsStoryPlanEstimate += aStory.get("PlanEstimate")||0;
+                aRelease.itsStoryPlanEstimate += aStory.get("PlanEstimate") || 0;
 
-                if (aStory.get("ScheduleState") === "Accepted"){
+                if (aStory.get("ScheduleState") === "Accepted") {
                     aRelease.itsStoryCountAccepted += 1;
-                    aRelease.itsStoryPlanEstimateAccepted += aStory.get("PlanEstimate")||0;
+                    aRelease.itsStoryPlanEstimateAccepted += aStory.get("PlanEstimate") || 0;
                 }
 
                 this.gPiReleases.push(aRelease);
@@ -264,16 +252,15 @@ Ext.define('CustomApp', {
 
     }, // end _processPiStories
 
-    _processPiReleases: function() {
+    _processPiReleases:function () {
 
         var nbrReleases = this.gPiReleases.length;
-        console.log("nbrReleases: " + nbrReleases);
 
         var releaseNdx;
         var aRelease;
 
         // loop through each of the PI's releases
-        for (releaseNdx = 0; releaseNdx < nbrReleases; releaseNdx++){
+        for (releaseNdx = 0; releaseNdx < nbrReleases; releaseNdx++) {
 
             aRelease = this.gPiReleases[releaseNdx];
 
@@ -283,48 +270,45 @@ Ext.define('CustomApp', {
 
 
     // fetch all release names (we may later have to scale this back and do this more efficiently)
-    _fetchReleaseNames: function() {
+    _fetchReleaseNames:function () {
 
         var store = Ext.create('Rally.data.WsapiDataStore', {
-            model: 'Release',
+            model:'Release',
 
-            fetch: ["ObjectID","Name"],
+            fetch:["ObjectID", "Name"],
             // scope globally
-            context: {
-                project: null
+            context:{
+                project:null
             },
-            limit: Infinity,
+            limit:Infinity,
             autoLoad:true,
-            listeners: {
-                load: function(store, data, success) {
-                    console.log("data",data);
-
+            listeners:{
+                load:function (store, data, success) {
                     // map release OIDs to release NAMES
                     this._mapReleaseOIDsToNames(store, data);
 
                 },
-                scope: this
+                scope:this
             }
         });
 
     }, // end _fetchReleaseNames
 
 
-    _mapReleaseOIDsToNames: function(theStore, allReleaseRecords)
-    {
+    _mapReleaseOIDsToNames:function (theStore, allReleaseRecords) {
         var releaseNamesByObjectId = {};
 
         // create a hash of all WSAPI release OIDs to their Name
-        Ext.Array.each(allReleaseRecords,function(releaseRecord){
+        Ext.Array.each(allReleaseRecords, function (releaseRecord) {
             releaseNamesByObjectId[releaseRecord.get("ObjectID")] = releaseRecord.get("Name");
         });
 
 
         // loop through each PI's release object and set its name from the OID/Name hash
-        Ext.Array.each(this.gPiReleases,function(piRelease){
+        Ext.Array.each(this.gPiReleases, function (piRelease) {
             piRelease.itsName = releaseNamesByObjectId[piRelease.itsOID];
 
-            if(!piRelease.itsName){
+            if (!piRelease.itsName) {
                 piRelease.itsName = "Unscheduled";
             }
         });
@@ -332,14 +316,14 @@ Ext.define('CustomApp', {
         // bucket PI's releases by NAME (accounts for roll-up releases) into the summedPisByReleaseName object
         var summedPisByReleaseName = {};
 
-        Ext.Array.each(this.gPiReleases,function(piRelease){
-            if(!Ext.isObject(summedPisByReleaseName[piRelease.itsName])){
+        Ext.Array.each(this.gPiReleases, function (piRelease) {
+            if (!Ext.isObject(summedPisByReleaseName[piRelease.itsName])) {
                 summedPisByReleaseName[piRelease.itsName] = piRelease;
 
                 // localize summed release entry
                 var summedRelease = summedPisByReleaseName[piRelease.itsName];
             }
-            else{
+            else {
                 // localize summed release entry
                 var summedRelease = summedPisByReleaseName[piRelease.itsName];
                 summedRelease.itsStoryCount += piRelease.itsStoryCount;
@@ -347,9 +331,6 @@ Ext.define('CustomApp', {
                 summedRelease.itsStoryPlanEstimate += piRelease.itsStoryPlanEstimate;
                 summedRelease.itsStoryPlanEstimateAccepted += piRelease.itsStoryPlanEstimateAccepted;
             }
-
-            //console.log(summedRelease);
-
         });
 
         var arrayOfStuff = Ext.Object.getValues(summedPisByReleaseName);
@@ -363,64 +344,53 @@ Ext.define('CustomApp', {
     // chart out the PI's bucketed by name releases
     _chartPiReleases:function (piSummaryDatas) {
 
-        console.log(piSummaryDatas);
-
-
-
         // define a custom  model
         var aModel = Ext.define('CustomStoryModel', {
-            extend: 'Ext.data.Model',
-            fields: [
-                {name: 'itsName',  type: 'string'},
-                {name: 'itsOID',   type: 'int'},
-                {name: 'itsStoryCount',   type: 'int'},
-                {name: 'itsStoryCountAccepted',   type: 'int'},
-                {name: 'itsStoryPlanEstimate',   type: 'int'},
-                {name: 'itsStoryPlanEstimateAccepted',   type: 'int'}
+            extend:'Ext.data.Model',
+            fields:[
+                {name:'itsName', type:'string'},
+                {name:'itsOID', type:'int'},
+                {name:'itsStoryCount', type:'int'},
+                {name:'itsStoryCountAccepted', type:'int'},
+                {name:'itsStoryPlanEstimate', type:'int'},
+                {name:'itsStoryPlanEstimateAccepted', type:'int'}
             ]
         });
 
         // define a store built around the custom  model
         var aStore = Ext.create('Ext.data.Store', {
-            storeId: 'piReleaseStore',
-            model: aModel,
-            data: piSummaryDatas
+            storeId:'piReleaseStore',
+            model:aModel,
+            data:piSummaryDatas
         });
 
 
         // define a rally grid to output the store's data in
         var aPiReleaseGrid = Ext.create('Rally.ui.grid.Grid', {
-            itemId: 'piReleaseGrid',
-            store: aStore,
-            width: 470,
-            columnCfgs: [
+            itemId:'piReleaseGrid',
+            store:aStore,
+            width:470,
+            columnCfgs:[
                 {
-                    text: 'Release', dataIndex: 'itsName', flex: 2
+                    text:'Release', dataIndex:'itsName', flex:2
                 },
                 //{
                 //    text: 'Release ID', dataIndex: 'itsOID', flex: 1
                 //},
                 {
-                    text: 'Story Count Total', dataIndex: 'itsStoryCount', width: 80
+                    text:'Story Count Total', dataIndex:'itsStoryCount', width:80
                 },
                 {
-                    text: 'Story Count Accepted', dataIndex: 'itsStoryCountAccepted', width: 80
+                    text:'Story Count Accepted', dataIndex:'itsStoryCountAccepted', width:80
                 },
                 {
-                    text: 'Plan Estimate Total', dataIndex: 'itsStoryPlanEstimate', width: 80
+                    text:'Plan Estimate Total', dataIndex:'itsStoryPlanEstimate', width:80
                 },
                 {
-                    text: 'Plan Estimate Accepted', dataIndex: 'itsStoryPlanEstimateAccepted', width: 80
+                    text:'Plan Estimate Accepted', dataIndex:'itsStoryPlanEstimateAccepted', width:80
                 }
             ] // end columnCfgs
         });
-
-
-
-
-
-
-
 
 
         // render the grid of all of the PI's leaf stories
@@ -428,7 +398,7 @@ Ext.define('CustomApp', {
         aPiReleaseGridContainer.removeAll(true);
         aPiReleaseGridContainer.add(aPiReleaseGrid);
 
-
+        this._makeChart(piSummaryDatas);
     }, // end _chartPiReleases
 
 
@@ -449,6 +419,52 @@ Ext.define('CustomApp', {
             }
         }
         return null;
-    } // end _findReleaseEntry
+    }, // end _findReleaseEntry
+
+
+    _makeChart:function (releaseSummaries) {
+        console.log(releaseSummaries);
+        var categories = [];
+        var storyPlanEstimates = [];
+        Ext.Array.each(releaseSummaries,function(summary)
+            {
+                categories.push(summary.itsName);
+                storyPlanEstimates.push(summary.itsStoryPlanEstimate);
+            }
+        );
+        this.insert(1,
+            {
+                xtype:'rallychart',
+                height:400,
+                chartConfig:{
+                    chart:{
+                        type: 'bar'
+                    },
+                    title:{
+                        text:'Portfolio Item By Release',
+                        align:'center'
+                    },
+                    xAxis:[
+                        {
+                            categories:categories,
+                            title:{
+                                text:'Release'
+                            }
+                        }
+                    ],
+                    yAxis:{
+                        title:{
+                            text:'Points'
+                        }
+                    },
+                    series:[
+                        {
+                            stacking: 'normal',
+                            data:storyPlanEstimates
+                        }
+                    ]
+                }
+            });
+    }
 
 });
