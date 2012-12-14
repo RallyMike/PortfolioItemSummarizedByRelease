@@ -40,9 +40,7 @@ Ext.define('CustomApp', {
 
     // --- end global variables ---
 
-
-    launch:function () {
-
+    fireChooser:function(){
         Ext.create('Rally.ui.dialog.ChooserDialog',{
             artifactTypes:['PortfolioItem'],
             autoShow:true,
@@ -57,7 +55,28 @@ Ext.define('CustomApp', {
                 scope:this
             }
         });
+    },
 
+    launch:function () {
+
+        // add select PI button to header
+        var piHeaderContainer = this.down('#piHeaderContainer');
+        piHeaderContainer.add({
+            xtype: 'rallybutton',
+            text: 'Select Portfolio Item',
+            listeners:{
+                click: this.fireChooser,
+                scope:this
+            }
+        });
+
+
+        // add PI name text box (nulled) to header
+        var piTextBox = Ext.create('Ext.container.Container', {
+            itemId:"piTextBox",
+            html: ""
+        });
+        piHeaderContainer.add(piTextBox);
 
     }, // end launch
 
@@ -77,23 +96,14 @@ Ext.define('CustomApp', {
         var piObjectID = selectedRecord.get('ObjectID');
         var piName = selectedRecord.get("Name");
 
-        console.log(piObjectID);
-        console.log(piName);
-
         this._reset();
 
 
 
-        // output selected PI scoop
-        // spit out all leaf stories into a grid
-        var piTextBox = Ext.create('Ext.container.Container', {
-            html: "<b>Portfolio Item: </b>" + piFormattedID + " - " + piName
-        });
+        var piTextBox = this.down('#piTextBox');
+        //piHeaderContainer.removeAll(true);
 
-        // render the text box to our PI header container
-        var piHeaderContainer = this.down('#piHeaderContainer');
-        piHeaderContainer.removeAll(true);
-        piHeaderContainer.add(piTextBox);
+        piTextBox.update("<br><b>Portfolio Item: </b>" + piFormattedID + " - " + piName);
 
 
 

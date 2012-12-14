@@ -22,9 +22,9 @@ Ext.define('CustomApp', {
     },
     items:[
 
-        { // define a container to house the PI combo box selector
+        { // define a container to house header info about the PI
             xtype:'container',
-            itemId:'piChooserContainer',
+            itemId:'piHeaderContainer',
             padding:'15 15 15 15' // top ? bottom left,
         },
         {
@@ -52,9 +52,7 @@ Ext.define('CustomApp', {
 
     // --- end global variables ---
 
-
-    launch:function () {
-
+    fireChooser:function(){
         Ext.create('Rally.ui.dialog.ChooserDialog',{
             artifactTypes:['PortfolioItem'],
             autoShow:true,
@@ -64,12 +62,33 @@ Ext.define('CustomApp', {
             listeners:{
                 artifactChosen:function (selectedRecord) {
                     //Ext.Msg.alert('Chooser', selectedRecord.get('Name') + ' was chosen');
-                    this._getLeafStoriesInPi(selectedRecord.get('ObjectID'));
+                    this._getLeafStoriesInPi(selectedRecord);
                 },
                 scope:this
             }
         });
+    },
 
+    launch:function () {
+
+        // add select PI button to header
+        var piHeaderContainer = this.down('#piHeaderContainer');
+        piHeaderContainer.add({
+            xtype: 'rallybutton',
+            text: 'Select Portfolio Item',
+            listeners:{
+                click: this.fireChooser,
+                scope:this
+            }
+        });
+
+
+        // add PI name text box (nulled) to header
+        var piTextBox = Ext.create('Ext.container.Container', {
+            itemId:"piTextBox",
+            html: ""
+        });
+        piHeaderContainer.add(piTextBox);
 
     }, // end launch
 
@@ -83,11 +102,24 @@ Ext.define('CustomApp', {
 
 
     // after PI selected, query for all its leaf level stories
-    _getLeafStoriesInPi:function (piObjectID) {
+    _getLeafStoriesInPi:function (selectedRecord) {
 
-        console.log(piObjectID);
+        var piFormattedID = selectedRecord.get('FormattedID');
+        var piObjectID = selectedRecord.get('ObjectID');
+        var piName = selectedRecord.get("Name");
 
         this._reset();
+
+
+
+        var piTextBox = this.down('#piTextBox');
+        //piHeaderContainer.removeAll(true);
+
+        piTextBox.update("<br><b>Portfolio Item: </b>" + piFormattedID + " - " + piName);
+
+
+
+
 
         var query = {
             "__At":"current",
@@ -375,10 +407,10 @@ Ext.define('CustomApp', {
             width: 470,
             columnCfgs: [
                 {
-                    text: 'Release', dataIndex: 'itsName', width: 80
+                    text: 'Release', dataIndex: 'itsName', flex: 2
                 },
                 //{
-                //    text: 'Release ID', dataIndex: 'itsOID', width: 80
+                //    text: 'Release ID', dataIndex: 'itsOID', flex: 1
                 //},
                 {
                     text: 'Story Count Total', dataIndex: 'itsStoryCount', width: 80
