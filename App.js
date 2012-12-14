@@ -426,10 +426,13 @@ Ext.define('CustomApp', {
         console.log(releaseSummaries);
         var categories = [];
         var storyPlanEstimates = [];
+        var storyPlanEstimateAccepted = [];
+        var storyPlanEstimatesNotAccepted = [];
         Ext.Array.each(releaseSummaries,function(summary)
             {
                 categories.push(summary.itsName);
-                storyPlanEstimates.push(summary.itsStoryPlanEstimate);
+                storyPlanEstimatesNotAccepted.push(summary.itsStoryPlanEstimate - summary.itsStoryPlanEstimateAccepted);
+                storyPlanEstimateAccepted.push(summary.itsStoryPlanEstimateAccepted)
             }
         );
         this.insert(1,
@@ -460,7 +463,12 @@ Ext.define('CustomApp', {
                     series:[
                         {
                             stacking: 'normal',
-                            data:storyPlanEstimates
+                            data:storyPlanEstimateAccepted
+                        },
+
+                        {
+                            stacking: 'normal',
+                            data:storyPlanEstimatesNotAccepted
                         }
                     ]
                 }
