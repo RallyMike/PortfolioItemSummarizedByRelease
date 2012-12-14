@@ -1,5 +1,5 @@
-![alt text](https://github.com/RallyMike/PortfolioItemSummarizedByRelease/blob/master/portfolio_item_breakdown_by_release.png "Portfolio Item Breakdown by Release")
-![Bilby Stampede](https://github.com/RallyMike/PortfolioItemSummarizedByRelease/blob/master/portfolio_item_breakdown_by_release.png)
+![alt text](https://raw.github.com/RallyMike/PortfolioItemSummarizedByRelease/master/deploy/portfolio_item_breakdown_by_release.png "Portfolio Item Breakdown by Release")
+
 
 Portfolio Items are often decomposed into many user stories which get scheduled over multiple releases.  Currently
 in Rally, there is no simple way to effectively view the schedule of a given portfolio item.  This App generates a
