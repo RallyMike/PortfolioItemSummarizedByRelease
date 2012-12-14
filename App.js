@@ -10,22 +10,22 @@ Ext.define('CustomApp', {
     },
     items:[
 
-        { // define a container to house the PI combo box selector
+        { // define a container to house header info about the PI
             xtype:'container',
-            itemId:'piChooserContainer',
-            padding:'15 15 15 15' // top ? bottom left
+            itemId:'piHeaderContainer',
+            padding:'15 15 15 15' // top ? bottom left,
         },
         {
             // panel where we will place the grid
             xtype:'panel',
-            itemId:'piLeafStoryGridContainer',
+            itemId:'piReleaseGridContainer',
             layout:'fit',
             height:400
         },
         {
             // panel where we will place the grid
             xtype:'panel',
-            itemId:'piReleaseGridContainer',
+            itemId:'piLeafStoryGridContainer',
             layout:'fit',
             height:400
         }
@@ -44,13 +44,15 @@ Ext.define('CustomApp', {
     launch:function () {
 
         Ext.create('Rally.ui.dialog.ChooserDialog',{
-            artifactTypes:['PortfolioItem/Feature'],
+            artifactTypes:['PortfolioItem'],
             autoShow:true,
-            title:'Choose Feature',
+            title:'Select Portfolio Item',
+            limit:20,
+            height:500,
             listeners:{
                 artifactChosen:function (selectedRecord) {
                     //Ext.Msg.alert('Chooser', selectedRecord.get('Name') + ' was chosen');
-                    this._getLeafStoriesInPi(selectedRecord.get('ObjectID'));
+                    this._getLeafStoriesInPi(selectedRecord);
                 },
                 scope:this
             }
@@ -69,9 +71,33 @@ Ext.define('CustomApp', {
 
 
     // after PI selected, query for all its leaf level stories
-    _getLeafStoriesInPi:function (piObjectID) {
+    _getLeafStoriesInPi:function (selectedRecord) {
+
+        var piFormattedID = selectedRecord.get('FormattedID');
+        var piObjectID = selectedRecord.get('ObjectID');
+        var piName = selectedRecord.get("Name");
+
+        console.log(piObjectID);
+        console.log(piName);
 
         this._reset();
+
+
+
+        // output selected PI scoop
+        // spit out all leaf stories into a grid
+        var piTextBox = Ext.create('Ext.container.Container', {
+            html: "<b>Portfolio Item: </b>" + piFormattedID + " - " + piName
+        });
+
+        // render the text box to our PI header container
+        var piHeaderContainer = this.down('#piHeaderContainer');
+        piHeaderContainer.removeAll(true);
+        piHeaderContainer.add(piTextBox);
+
+
+
+
 
         var query = {
             "__At":"current",
@@ -94,6 +120,7 @@ Ext.define('CustomApp', {
                 workspace:this.context.getWorkspace(),
                 project:this.context.getProject()
             },
+            pageSize:10000000,
             fetch:find,
             rawFind:query,
             hydrate: ["ScheduleState"],
@@ -358,22 +385,22 @@ Ext.define('CustomApp', {
             width: 470,
             columnCfgs: [
                 {
-                    text: 'Release', dataIndex: 'itsName', width: 80
+                    text: 'Release', dataIndex: 'itsName', flex: 2
+                },
+                //{
+                //    text: 'Release ID', dataIndex: 'itsOID', flex: 1
+                //},
+                {
+                    text: 'Story Count Total', dataIndex: 'itsStoryCount', width: 80
                 },
                 {
-                    text: 'Release ID', dataIndex: 'itsOID', width: 80
+                    text: 'Story Count Accepted', dataIndex: 'itsStoryCountAccepted', width: 80
                 },
                 {
-                    text: 'Story Count', dataIndex: 'itsStoryCount', width: 80
+                    text: 'Plan Estimate Total', dataIndex: 'itsStoryPlanEstimate', width: 80
                 },
                 {
-                    text: 'Accepted Story Count', dataIndex: 'itsStoryCountAccepted', width: 80
-                },
-                {
-                    text: 'Plan Estimate', dataIndex: 'itsStoryPlanEstimate', width: 80
-                },
-                {
-                    text: 'Accepted Plan Estimate', dataIndex: 'itsStoryPlanEstimateAccepted', width: 80
+                    text: 'Plan Estimate Accepted', dataIndex: 'itsStoryPlanEstimateAccepted', width: 80
                 }
             ] // end columnCfgs
         });

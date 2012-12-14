@@ -10,164 +10,427 @@
 
     <script type="text/javascript">
         Rally.onReady(function () {
-                Ext.define('CustomApp', {
-    extend: 'Rally.app.App',
-    componentCls: 'app',
-    layout: {
-        type: 'vbox',
-        align: 'stretch'
+                // return all leaf stories of a hard-coded PI object ID
+
+
+Ext.define('CustomApp', {
+    extend:'Rally.app.App',
+    componentCls:'app',
+    layout:{
+        type:'vbox',
+        align:'stretch'
     },
     items:[
-        {
-            xtype: 'panel',
-            layout: 'anchor',
-            border: true,
-            fieldDefaults: {
-                labelWidth: 40
-            },
-            defaultType: 'textfield',
-            bodyPadding: 5,
-            items: [
-                {
-                    fieldLabel: 'Query',
-                    itemId: 'queryField',
-                    anchor:'100%',
-                    width: 700,
-                    height: 100,
-                    xtype: 'textarea',
-                    value: '{\n'+
-                            '    "ObjectID": {$gt:0},\n'+
-                            '    "__At": "current"\n'+
-                            '}'
-                },
-                {
-                    fieldLabel: 'Fields',
-                    itemId: 'fieldsField',
-                    anchor: '100%',
-                    width: 700,
-                    value: "ObjectID, _ValidFrom, _UnformattedID, Name"
-                },
-                {
-                    fieldLabel: 'Sort',
-                    itemId: 'sortField',
-                    anchor: '100%',
-                    width: 700,
-                    value: "{'ObjectID' : -1, '_ValidFrom': 1}"
-                },
-                {
-                    fieldLabel: 'Page Size',
-                    itemId: 'pageSizeField',
-                    anchor: '100%',
-                    width: 700,
-                    value: '10'
-                }
-            ],
-            
-            buttons: [
-                {
-                    xtype: 'rallybutton',
-                    text: 'Search',
-                    itemId: 'searchButton'
-                }
-            ]
+
+        { // define a container to house the PI combo box selector
+            xtype:'container',
+            itemId:'piChooserContainer',
+            padding:'15 15 15 15' // top ? bottom left,
         },
         {
-            xtype: 'panel',
-            itemId: 'gridHolder',
-            layout: 'fit',
-            height: 400
+            // panel where we will place the grid
+            xtype:'panel',
+            itemId:'piReleaseGridContainer',
+            layout:'fit',
+            height:400
+        },
+        {
+            // panel where we will place the grid
+            xtype:'panel',
+            itemId:'piLeafStoryGridContainer',
+            layout:'fit',
+            height:400
         }
     ],
-    launch: function() {
-        var button = this.down('#searchButton');
-        button.on('click', this.goClicked, this);
-    },
-    
-    goClicked: function(){
-        var queryField = this.down('#queryField');
-        var query = queryField.getValue();
-        var selectedFields = this.down('#fieldsField').getValue();
-        if(selectedFields){
-            if(selectedFields === 'true'){
-                selectedFields = true;
-            }
-            else{
-                selectedFields = selectedFields.split(', ');
-            }
-        }
-        
-        var sort = this.down('#sortField').getValue();
-        
-        var pageSize = this.down('#pageSizeField').getValue();
-        var parsedPageSize = parseInt(pageSize, 10);
-        // don't allow empty or 0 pagesize
-        pageSize = (parsedPageSize) ? parsedPageSize : 10;
 
-        var callback = Ext.bind(this.processSnapshots, this);
-        this.doSearch(query, selectedFields, sort, pageSize, callback);
-    },
-    
-    createSortMap: function(csvFields){
-        var fields = csvFields.split(', ');
-        var sortMap = {};
-        for(var field in fields){
-            if(fields.hasOwnProperty(field)){
-                sortMap[field] = 1;
-            }
-        }
-        
-        return sortMap;
-    },
-    
-    doSearch: function(query, fields, sort, pageSize, callback){
-        var transformStore = Ext.create('Rally.data.lookback.SnapshotStore', {
-            context: {
-                workspace: this.context.getWorkspace(),
-                project: this.context.getProject()
-            },
-            fetch: fields,
-            rawFind: query,
-            autoLoad: true,
-            listeners: {
-                scope: this,
-                load: this.processSnapshots
+
+    // --- App global variables ---
+    //gPiStories:[], // array to capture the list of all leaf stories in the PI
+    gPiReleases:[], // array to capture the list of all stories a PI is scheduled in
+
+    //gStoryGrid:undefined,
+
+    // --- end global variables ---
+
+
+    launch:function () {
+
+        Ext.create('Rally.ui.dialog.ChooserDialog',{
+            artifactTypes:['PortfolioItem'],
+            autoShow:true,
+            title:'Select Portfolio Item',
+            limit:20,
+            height:500,
+            listeners:{
+                artifactChosen:function (selectedRecord) {
+                    //Ext.Msg.alert('Chooser', selectedRecord.get('Name') + ' was chosen');
+                    this._getLeafStoriesInPi(selectedRecord.get('ObjectID'));
+                },
+                scope:this
             }
         });
+
+
+    }, // end launch
+
+
+    // reset the page's controls
+    _reset:function () {
+        this.gPiStories = [];
+        //this._outstandingQueries = 0;
+        this.down('#piLeafStoryGridContainer').removeAll();
     },
-    
-    processSnapshots: function(store, records){
+
+
+    // after PI selected, query for all its leaf level stories
+    _getLeafStoriesInPi:function (piObjectID) {
+
+        console.log(piObjectID);
+
+        this._reset();
+
+        var query = {
+            "__At":"current",
+            "_TypeHierarchy":"HierarchicalRequirement",
+            "Children":null,
+            "_ItemHierarchy":piObjectID
+        };
+
+        // set query config info
+        var find = ["ObjectID", "_UnformattedID", "Name", "Release", "ScheduleState", "PlanEstimate"];
+        var queryString = Ext.JSON.encode(query);
+
+        // set context to global across the workspace
+        var context = this.getContext().getDataContext();
+        context.project = undefined;
+
+        // fetch the snapshot of all leaf level stories for the PI
+        var ssPiLeafStories = Ext.create('Rally.data.lookback.SnapshotStore', {
+            context:{
+                workspace:this.context.getWorkspace(),
+                project:this.context.getProject()
+            },
+            pageSize:10000000,
+            fetch:find,
+            rawFind:query,
+            hydrate: ["ScheduleState"],
+            autoLoad:true,
+            listeners:{
+                scope:this,
+                load:this._processPiStories
+            }
+        });
+
+
+    }, // end _getStoriesInPi
+
+    // bucket the PI's stories by RELEASE (and no release)
+    _processPiStories:function (store, records) {
+
+        // spit out all leaf stories into a grid
         var snapshotGrid = Ext.create('Rally.ui.grid.Grid', {
-            title: 'Snapshots',
-            store: store,
-            columnCfgs: [
+            title:'Snapshots',
+            store:store,
+            columnCfgs:[
                 {
-                    text: 'ObjectID', 
-                    dataIndex: 'ObjectID'
+                    text:'ObjectID',
+                    dataIndex:'ObjectID'
                 },
                 {
-                    text: 'Name', 
-                    dataIndex: 'Name'
+                    text:'Name',
+                    dataIndex:'Name'
                 },
                 {
-                    text: 'Project',
-                    dataIndex: 'Project' 
+                    text:'Project',
+                    dataIndex:'Project'
                 },
                 {
-                    text: '_ValidFrom',
-                    dataIndex: '_ValidFrom' 
+                    text:'_UnformattedID',
+                    dataIndex:'_UnformattedID'
+                },
+                ,
+                {
+                    text:'Release',
+                    dataIndex:'Release'
                 },
                 {
-                    text: '_ValidTo',
-                    dataIndex: '_ValidTo' 
+                    text:'PlanEstimate',
+                    dataIndex:'PlanEstimate'
+                },
+                {
+                    text:'ScheduleState',
+                    dataIndex:'ScheduleState'
                 }
             ],
-            height: 400
+            height:400
         });
-        
-        var gridHolder = this.down('#gridHolder');
+
+        // render the grid of all of the PI's leaf stories
+        var gridHolder = this.down('#piLeafStoryGridContainer');
         gridHolder.removeAll(true);
         gridHolder.add(snapshotGrid);
-    }
+
+
+        // --- BUCKET TIME BABY ---
+        var aStory;
+        var aRelease;
+
+        var nbrStories = records.length;
+        //console.log("nbrStories: " + nbrStories);
+
+        var storyNdx;
+
+        // loop through each of the PI's stories
+        for (storyNdx = 0; storyNdx < nbrStories; storyNdx++){
+            aStory = records[storyNdx];
+
+            if (aStory !== null){
+
+//                console.dir(aStory);
+//                console.log("aStory" + aStory);
+//                console.log("aStory" + aStory.get("Name"));
+//                console.log("aStory.PlanEstimate: " + aStory.get("PlanEstimate"));
+//                console.log("aStory.Release: " + aStory.get("Release"));
+//                console.log("aStory.ScheduleState: " + aStory.get("ScheduleState"));
+
+                aRelease = null;
+
+                aRelease = this._findReleaseEntry(this.gPiReleases, aStory.Release);
+
+                if (aRelease === null){
+
+                    // populate initial entry for this release
+                    aRelease = new Object();
+
+                    aRelease.itsStoryCount = 0;
+                    aRelease.itsStoryPlanEstimate = 0;
+                    aRelease.itsStoryCountAccepted = 0;
+                    aRelease.itsStoryPlanEstimateAccepted = 0;
+
+                }
+
+
+                if (!aStory.get("Release")){
+                    aRelease.itsOID = "Not Scheduled";
+                }
+                else{
+                    aRelease.itsOID = aStory.get("Release");
+                }
+
+                aRelease.itsStoryCount += 1;
+                aRelease.itsStoryPlanEstimate += aStory.get("PlanEstimate")||0;
+
+                if (aStory.get("ScheduleState") === "Accepted"){
+                    aRelease.itsStoryCountAccepted += 1;
+                    aRelease.itsStoryPlanEstimateAccepted += aStory.get("PlanEstimate")||0;
+                }
+
+                this.gPiReleases.push(aRelease);
+
+
+            } // end process this story
+
+        } // end loop through all stories
+
+
+        // process the PI's releases data
+        this._processPiReleases();
+
+        // fetch release names (we need to convert Release OIDs from the LBAPI to logical Release names)
+        this._fetchReleaseNames();
+
+        // --- END BUCKET TIME BABY ---
+
+
+    }, // end _processPiStories
+
+    _processPiReleases: function() {
+
+        var nbrReleases = this.gPiReleases.length;
+        console.log("nbrReleases: " + nbrReleases);
+
+        var releaseNdx;
+        var aRelease;
+
+        // loop through each of the PI's releases
+        for (releaseNdx = 0; releaseNdx < nbrReleases; releaseNdx++){
+
+            aRelease = this.gPiReleases[releaseNdx];
+
+        } // end loop through each of the PI's releases
+
+    }, // end _processPiReleases
+
+
+    // fetch all release names (we may later have to scale this back and do this more efficiently)
+    _fetchReleaseNames: function() {
+
+        var store = Ext.create('Rally.data.WsapiDataStore', {
+            model: 'Release',
+
+            fetch: ["ObjectID","Name"],
+            // scope globally
+            context: {
+                project: null
+            },
+            limit: Infinity,
+            autoLoad:true,
+            listeners: {
+                load: function(store, data, success) {
+                    console.log("data",data);
+
+                    // map release OIDs to release NAMES
+                    this._mapReleaseOIDsToNames(store, data);
+
+                },
+                scope: this
+            }
+        });
+
+    }, // end _fetchReleaseNames
+
+
+    _mapReleaseOIDsToNames: function(theStore, allReleaseRecords)
+    {
+        var releaseNamesByObjectId = {};
+
+        // create a hash of all WSAPI release OIDs to their Name
+        Ext.Array.each(allReleaseRecords,function(releaseRecord){
+            releaseNamesByObjectId[releaseRecord.get("ObjectID")] = releaseRecord.get("Name");
+        });
+
+
+        // loop through each PI's release object and set its name from the OID/Name hash
+        Ext.Array.each(this.gPiReleases,function(piRelease){
+            piRelease.itsName = releaseNamesByObjectId[piRelease.itsOID];
+
+            if(!piRelease.itsName){
+                piRelease.itsName = "Unscheduled";
+            }
+        });
+
+        // bucket PI's releases by NAME (accounts for roll-up releases) into the summedPisByReleaseName object
+        var summedPisByReleaseName = {};
+
+        Ext.Array.each(this.gPiReleases,function(piRelease){
+            if(!Ext.isObject(summedPisByReleaseName[piRelease.itsName])){
+                summedPisByReleaseName[piRelease.itsName] = piRelease;
+
+                // localize summed release entry
+                var summedRelease = summedPisByReleaseName[piRelease.itsName];
+            }
+            else{
+                // localize summed release entry
+                var summedRelease = summedPisByReleaseName[piRelease.itsName];
+                summedRelease.itsStoryCount += piRelease.itsStoryCount;
+                summedRelease.itsStoryCountAccepted += piRelease.itsStoryCountAccepted;
+                summedRelease.itsStoryPlanEstimate += piRelease.itsStoryPlanEstimate;
+                summedRelease.itsStoryPlanEstimateAccepted += piRelease.itsStoryPlanEstimateAccepted;
+            }
+
+            //console.log(summedRelease);
+
+        });
+
+        var arrayOfStuff = Ext.Object.getValues(summedPisByReleaseName);
+
+        // chart PI's release meta data
+        this._chartPiReleases(arrayOfStuff);
+
+    }, // end _fetchReleaseNames
+
+
+    // chart out the PI's bucketed by name releases
+    _chartPiReleases:function (piSummaryDatas) {
+
+        console.log(piSummaryDatas);
+
+
+
+        // define a custom  model
+        var aModel = Ext.define('CustomStoryModel', {
+            extend: 'Ext.data.Model',
+            fields: [
+                {name: 'itsName',  type: 'string'},
+                {name: 'itsOID',   type: 'int'},
+                {name: 'itsStoryCount',   type: 'int'},
+                {name: 'itsStoryCountAccepted',   type: 'int'},
+                {name: 'itsStoryPlanEstimate',   type: 'int'},
+                {name: 'itsStoryPlanEstimateAccepted',   type: 'int'}
+            ]
+        });
+
+        // define a store built around the custom  model
+        var aStore = Ext.create('Ext.data.Store', {
+            storeId: 'piReleaseStore',
+            model: aModel,
+            data: piSummaryDatas
+        });
+
+
+        // define a rally grid to output the store's data in
+        var aPiReleaseGrid = Ext.create('Rally.ui.grid.Grid', {
+            itemId: 'piReleaseGrid',
+            store: aStore,
+            width: 470,
+            columnCfgs: [
+                {
+                    text: 'Release', dataIndex: 'itsName', width: 80
+                },
+                //{
+                //    text: 'Release ID', dataIndex: 'itsOID', width: 80
+                //},
+                {
+                    text: 'Story Count Total', dataIndex: 'itsStoryCount', width: 80
+                },
+                {
+                    text: 'Story Count Accepted', dataIndex: 'itsStoryCountAccepted', width: 80
+                },
+                {
+                    text: 'Plan Estimate Total', dataIndex: 'itsStoryPlanEstimate', width: 80
+                },
+                {
+                    text: 'Plan Estimate Accepted', dataIndex: 'itsStoryPlanEstimateAccepted', width: 80
+                }
+            ] // end columnCfgs
+        });
+
+
+
+
+
+
+
+
+
+        // render the grid of all of the PI's leaf stories
+        var aPiReleaseGridContainer = this.down('#piReleaseGridContainer');
+        aPiReleaseGridContainer.removeAll(true);
+        aPiReleaseGridContainer.add(aPiReleaseGrid);
+
+
+    }, // end _chartPiReleases
+
+
+    _findReleaseEntry:function (theArr, theReleaseOID) {
+
+        // check if array is empty
+        if (this.gReleaseArray === null)
+            return null;
+
+
+        arrLen = theArr.length;
+
+        for (x = 0; x < arrLen; x++) {
+            var anEntry = theArr[x];
+
+            if (anEntry.itsOID == theReleaseOID) {
+                return anEntry
+            }
+        }
+        return null;
+    } // end _findReleaseEntry
+
 });
 
 
