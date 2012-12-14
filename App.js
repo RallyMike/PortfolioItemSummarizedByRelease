@@ -92,6 +92,7 @@ Ext.define('CustomApp', {
     _reset:function () {
         this.down('#piLeafStoryGridContainer').removeAll();
         this.down('#piByReleaseContainer').removeAll();
+        this.gPiReleases = [];
     },
 
 
@@ -377,7 +378,7 @@ Ext.define('CustomApp', {
     _sortPiByRolledUpReleases:function (a, b){
 
         //Compare "a" and "b" in some fashion, and return -1, 0, or 1
-        
+
         if (a.itsName === "Unscheduled"){
             return 1;
         }
@@ -499,7 +500,7 @@ Ext.define('CustomApp', {
                         type: 'column'
                     },
                     title:{
-                        text:'Portfolio Item By Release',
+                        text:'Portfolio Item Breakdown By Release',
                         align:'center'
                     },
                     xAxis:[
