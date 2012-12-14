@@ -275,7 +275,7 @@ Ext.define('CustomApp', {
         var store = Ext.create('Rally.data.WsapiDataStore', {
             model:'Release',
 
-            fetch:["ObjectID", "Name"],
+            fetch:["ObjectID", "Name","ReleaseStartDate","ReleaseDate"],
             // scope globally
             context:{
                 project:null
@@ -296,19 +296,25 @@ Ext.define('CustomApp', {
 
 
     _mapReleaseOIDsToNames:function (theStore, allReleaseRecords) {
-        var releaseNamesByObjectId = {};
+        var releaseRecordsByObjectId = {};
 
         // create a hash of all WSAPI release OIDs to their Name
         Ext.Array.each(allReleaseRecords, function (releaseRecord) {
-            releaseNamesByObjectId[releaseRecord.get("ObjectID")] = releaseRecord.get("Name");
+            releaseRecordsByObjectId[releaseRecord.get("ObjectID")] = releaseRecord;
         });
 
 
         // loop through each PI's release object and set its name from the OID/Name hash
         Ext.Array.each(this.gPiReleases, function (piRelease) {
-            piRelease.itsName = releaseNamesByObjectId[piRelease.itsOID];
+            var releaseRecord = releaseRecordsByObjectId[piRelease.itsOID];
 
-            if (!piRelease.itsName) {
+            // test if release record exists for this OID (note: won't exist for unscheduled releases
+            if (releaseRecordsByObjectId[piRelease.itsOID]) {
+                piRelease.itsName = releaseRecord.get("Name");
+                piRelease.releaseStartDate = releaseRecord.get("ReleaseStartDate");
+                piRelease.releaseDate = releaseRecord.get("ReleaseDate");
+            }
+            else{
                 piRelease.itsName = "Unscheduled";
             }
         });
