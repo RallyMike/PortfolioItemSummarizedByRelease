@@ -135,6 +135,14 @@ Ext.define('CustomApp', {
                 {
                     text:'Release',
                     dataIndex:'Release'
+                },
+                {
+                    text:'PlanEstimate',
+                    dataIndex:'PlanEstimate'
+                },
+                {
+                    text:'ScheduleState',
+                    dataIndex:'ScheduleState'
                 }
             ],
             height:400
@@ -151,7 +159,7 @@ Ext.define('CustomApp', {
         var aRelease;
 
         var nbrStories = records.length;
-        console.log("nbrStories: " + nbrStories);
+        //console.log("nbrStories: " + nbrStories);
 
         var storyNdx;
 
@@ -161,12 +169,12 @@ Ext.define('CustomApp', {
 
             if (aStory !== null){
 
-                console.dir(aStory);
-                console.log("aStory" + aStory);
-                console.log("aStory" + aStory.get("Name"));
-                console.log("aStory.PlanEstimate: " + aStory.get("PlanEstimate"));
-                console.log("aStory.Release: " + aStory.get("Release"));
-                console.log("aStory.ScheduleState: " + aStory.get("ScheduleState"));
+//                console.dir(aStory);
+//                console.log("aStory" + aStory);
+//                console.log("aStory" + aStory.get("Name"));
+//                console.log("aStory.PlanEstimate: " + aStory.get("PlanEstimate"));
+//                console.log("aStory.Release: " + aStory.get("Release"));
+//                console.log("aStory.ScheduleState: " + aStory.get("ScheduleState"));
 
                 aRelease = null;
 
@@ -284,38 +292,41 @@ Ext.define('CustomApp', {
             }
         });
 
-        // bucket PI's releases by name into the bucketReleaseByName object
+        // bucket PI's releases by NAME (accounts for roll-up releases) into the summedPisByReleaseName object
         var summedPisByReleaseName = {};
-//        itsName: "2012.2H"
-//        itsOID: 6883901892
-//        itsStoryCount: 1
-//        itsStoryCountAccepted: 1
-//        itsStoryPlanEstimate: 5
-//        itsStoryPlanEstimateAccepted: 5
+
         Ext.Array.each(this.gPiReleases,function(piRelease){
             if(!Ext.isObject(summedPisByReleaseName[piRelease.itsName])){
                 summedPisByReleaseName[piRelease.itsName] = piRelease;
+
+                // localize summed release entry
+                var summedRelease = summedPisByReleaseName[piRelease.itsName];
             }
-            //Pointer
-            var summedRelease = summedPisByReleaseName[piRelease.itsName];
-            summedRelease.itsStoryCount += piRelease.itsStoryCount;
-            summedRelease.itsStoryCountAccepted += piRelease.itsStoryCountAccepted;
-            summedRelease.itsStoryPlanEstimate += piRelease.itsStoryPlanEstimate;
-            summedRelease.itsStoryPlanEstimateAccepted += piRelease.itsStoryPlanEstimateAccepted;
+            else{
+                // localize summed release entry
+                var summedRelease = summedPisByReleaseName[piRelease.itsName];
+                summedRelease.itsStoryCount += piRelease.itsStoryCount;
+                summedRelease.itsStoryCountAccepted += piRelease.itsStoryCountAccepted;
+                summedRelease.itsStoryPlanEstimate += piRelease.itsStoryPlanEstimate;
+                summedRelease.itsStoryPlanEstimateAccepted += piRelease.itsStoryPlanEstimateAccepted;
+            }
+
+            //console.log(summedRelease);
+
         });
 
+        var arrayOfStuff = Ext.Object.getValues(summedPisByReleaseName);
 
         // chart PI's release meta data
-        this._chartPiReleases(summedPisByReleaseName);
+        this._chartPiReleases(arrayOfStuff);
 
     }, // end _fetchReleaseNames
 
 
     // chart out the PI's bucketed by name releases
-    _chartPiReleases:function (theBucketPiReleasesByName) {
+    _chartPiReleases:function (piSummaryDatas) {
 
-        console.log(theBucketPiReleasesByName);
-
+        console.log(piSummaryDatas);
 
 
 
@@ -327,8 +338,8 @@ Ext.define('CustomApp', {
                 {name: 'itsOID',   type: 'int'},
                 {name: 'itsStoryCount',   type: 'int'},
                 {name: 'itsStoryCountAccepted',   type: 'int'},
-                {name: 'itsPlanEstimate',   type: 'int'},
-                {name: 'itsPlanEstimateAccepted',   type: 'int'}
+                {name: 'itsStoryPlanEstimate',   type: 'int'},
+                {name: 'itsStoryPlanEstimateAccepted',   type: 'int'}
             ]
         });
 
@@ -336,7 +347,7 @@ Ext.define('CustomApp', {
         var aStore = Ext.create('Ext.data.Store', {
             storeId: 'piReleaseStore',
             model: aModel,
-            data: theBucketPiReleasesByName
+            data: piSummaryDatas
         });
 
 
@@ -359,10 +370,10 @@ Ext.define('CustomApp', {
                     text: 'Accepted Story Count', dataIndex: 'itsStoryCountAccepted', width: 80
                 },
                 {
-                    text: 'Plan Estimate', dataIndex: 'itsPlanEstimate', width: 80
+                    text: 'Plan Estimate', dataIndex: 'itsStoryPlanEstimate', width: 80
                 },
                 {
-                    text: 'Accepted Plan Estimate', dataIndex: 'itsPlanEstimateAccepted', width: 80
+                    text: 'Accepted Plan Estimate', dataIndex: 'itsStoryPlanEstimateAccepted', width: 80
                 }
             ] // end columnCfgs
         });
