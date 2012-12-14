@@ -16,6 +16,13 @@ Ext.define('CustomApp', {
             padding:'15 15 15 15' // top ? bottom left,
         },
         {
+            // panel where we will place the PI by release chart
+            xtype:'panel',
+            itemId:'piByReleaseContainer',
+            layout:'fit',
+            height:400
+        },
+        {
             // panel where we will place the grid
             xtype:'panel',
             itemId:'piReleaseGridContainer',
@@ -83,9 +90,8 @@ Ext.define('CustomApp', {
 
     // reset the page's controls
     _reset:function () {
-        this.gPiStories = [];
-        //this._outstandingQueries = 0;
         this.down('#piLeafStoryGridContainer').removeAll();
+        this.down('#piByReleaseContainer').removeAll();
     },
 
 
@@ -371,11 +377,13 @@ Ext.define('CustomApp', {
     _sortPiByRolledUpReleases:function (a, b){
 
         //Compare "a" and "b" in some fashion, and return -1, 0, or 1
-        console.log(a);
-        console.log(b);
-
+        
         if (a.itsName === "Unscheduled"){
             return 1;
+        }
+
+        if (b.itsName === "Unscheduled"){
+            return -1;
         }
 
         if (a.releaseDate > b.releaseDate) {
@@ -479,7 +487,10 @@ Ext.define('CustomApp', {
                 storyPlanEstimateAccepted.push(summary.itsStoryPlanEstimateAccepted)
             }
         );
-        this.insert(1,
+
+        var piByReleaseContainer = this.down('#piByReleaseContainer');
+
+        piByReleaseContainer.add(
             {
                 xtype:'rallychart',
                 height:400,
